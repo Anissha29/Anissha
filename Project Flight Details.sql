@@ -232,50 +232,104 @@ JOIN Flight f ON b.Flight_ID = f.Flight_ID;
 -- to view the data
 SELECT * FROM PassengerFlightDetails;
 
--- stored procedure (IN)
+-- stored procedure
 delimiter //
-CREATE PROCEDURE GetFlightByID(IN f_ID INT)
+CREATE PROCEDURE GetFlightDetails(IN sourceCity VARCHAR(100), IN destinationCity VARCHAR(100))
 BEGIN
-    SELECT * FROM Flight WHERE Flight_ID = f_ID;
+    SELECT * FROM Flight 
+    WHERE Source = sourceCity AND Destination = destinationCity;
 END //
 delimiter ;
--- calling the IN procedure
-CALL GetFlightByID(1001);
 
--- stored procedure (OUT)
+-- stored procedure
 delimiter //
-CREATE PROCEDURE GetFlightInfo(
-    IN f_ID INT,
-    OUT f_Number VARCHAR(10),
-    OUT f_Airline VARCHAR(50),
-    OUT f_Source VARCHAR(50),
-    OUT f_Destination VARCHAR(50)
-)
+CREATE PROCEDURE GetBookingDetails(IN passengerID INT)
 BEGIN
-    SELECT Flight_Number, Airline_Name, Source, Destination
-    INTO f_Number, f_Airline, f_Source, f_Destination
-    FROM Flight WHERE Flight_ID = f_ID;
+    SELECT b.Booking_ID, p.Name, f.Flight_Number, f.Airline_Name, f.Source, f.Destination, 
+           b.Booking_Date, b.Seat_Number, b.Status
+    FROM Booking b
+    JOIN Passenger p ON b.Passenger_ID = p.Passenger_ID
+    JOIN Flight f ON b.Flight_ID = f.Flight_ID
+    WHERE p.Passenger_ID = passengerID;
 END //
 delimiter ;
--- calling the OUT procedure
-CALL GetFlightInfo(1001, @FlightNumber, @Airline, @Source, @Destination);
--- displaying the data
-SELECT @FlightNumber, @Airline, @Source, @Destination;
+-- calling the stored procedure
+CALL GetBookingDetails(101);
 
--- stored procedure (INOUT)
+-- stored procedure
 delimiter //
-CREATE PROCEDURE GetTotalSeats(INOUT f_ID INT, OUT total_Seats INT)
+CREATE PROCEDURE FindAvailableFlights(IN sourceCity VARCHAR(100), IN destinationCity VARCHAR(100))
 BEGIN
-    SELECT Total_Seats INTO total_Seats FROM Flight WHERE Flight_ID = f_ID;
+    SELECT Flight_Number, Airline_Name, Departure_Time, Arrival_Time, Total_Seats
+    FROM Flight
+    WHERE Source = sourceCity AND Destination = destinationCity;
 END //
 delimiter ;
--- calling the INOUT procedure
-SET @FlightID = 1001;
-CALL GetTotalSeats(@FlightID, @Seats);
--- displaying the data
-SELECT @Seats;
+-- calling the procedure
+CALL FindAvailableFlights('Coimbatore', 'Bangalore');
 
+-- stored procedure
+delimiter //
+CREATE PROCEDURE GetPaymentDetails(IN bookingID INT)
+BEGIN
+    SELECT p.Payment_ID, b.Booking_ID, p.Amount, p.Payment_Date, p.Payment_Status
+    FROM Payment p
+    JOIN Booking b ON p.Booking_ID = b.Booking_ID
+    WHERE b.Booking_ID = bookingID;
+END //
+delimiter ;
+-- calling the procedure
+CALL GetPaymentDetails(210);
 
+-- stored procedure
+delimiter //
+CREATE PROCEDURE ListPendingBookings()
+BEGIN
+    SELECT * FROM Booking WHERE Status = 'Pending';
+END //
+delimiter ;
+-- calling the procedure
+CALL ListPendingBookings();
+
+-- stored procedure
+delimiter //
+CREATE PROCEDURE UpdateBookingStatus(IN bookingID INT, IN newStatus VARCHAR(50))
+BEGIN
+    UPDATE Booking 
+    SET Status = newStatus
+    WHERE Booking_ID = bookingID;
+END //
+delimiter ;
+-- calling the procedure
+CALL UpdateBookingStatus(206, 'Confirmed');
+
+-- stored procedure
+delimiter //
+CREATE PROCEDURE GetDepartingFlights(IN startTime DATETIME, IN endTime DATETIME)
+BEGIN
+    SELECT * FROM Flight 
+    WHERE Departure_Time BETWEEN startTime AND endTime;
+END //
+delimiter ;
+-- calling the procedure
+CALL GetDepartingFlights('2024-06-10 23:00:00', '2025-01-01 12:00:00');
+
+-- stored procedure
+delimiter //
+CREATE PROCEDURE GetMostPopularFlight()
+BEGIN
+    SELECT f.Flight_ID, f.Flight_Number, f.Airline_Name, COUNT(b.Booking_ID) AS Total_Bookings
+    FROM Flight f
+    JOIN Booking b ON f.Flight_ID = b.Flight_ID
+    GROUP BY f.Flight_ID, f.Flight_Number, f.Airline_Name
+    ORDER BY Total_Bookings DESC
+    LIMIT 1;
+END //
+delimiter ;
+-- calling the procedure
+CALL GetMostPopularFlight();
+
+  
 
     
 
